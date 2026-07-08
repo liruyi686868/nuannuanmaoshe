@@ -310,18 +310,15 @@ function loadApps() {
 async function refresh() {
   let apps = [];
 
-  if (firebaseReady && db) {
-    // 🔥 Read from Firebase Firestore (real-time cloud data)
-    try {
-      const snap = await db.collection('adoptions').orderBy('createdAt', 'desc').get();
-      apps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    } catch(e) {
-      console.log('Firebase read error, falling back to localStorage');
-      apps = loadApps();
-    }
-  } else {
-    apps = loadApps();
+  if (!firebaseReady || !db) {
+    document.getElementById('tableEmpty').style.display = 'block';
+    document.getElementById('tableEmpty').querySelector('p').textContent = '正在连接 Firebase...';
+    return;
   }
+
+  // 🔥 Read from Firestore only
+  const snap = await db.collection('adoptions').orderBy('createdAt', 'desc').get();
+  apps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
   const today = new Date().toDateString();
 
