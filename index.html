@@ -689,12 +689,13 @@ async function submitAdopt(e) {
       throw new Error('Firebase 未加载成功，请刷新页面重试');
     }
 
-    if (firebaseConfig.apiKey === 'YOUR_API_KEY') {
-      throw new Error('Firebase 配置未设置，请在代码中填入你的 Firebase 密钥');
-    }
-
-    // 🔥 Write to Firestore — no localStorage fallback
+    // 🔥 Write to Firestore
     await db.collection('adoptions').add(data);
+
+    // Success!
+    document.getElementById('adoptForm').style.display = 'none';
+    document.getElementById('formSuccess').classList.add('show');
+    updateCounts();
 
   } catch (err) {
     btn.disabled = false;
@@ -702,22 +703,12 @@ async function submitAdopt(e) {
 
     let msg = err.message || '';
     if (msg.includes('permission') || msg.includes('PERMISSION_DENIED')) {
-      msg = 'Firebase 权限被拒绝！请去 Firestore 控制台 → 规则 → 改为 allow read, write: if true;（安全规则没放开）';
+      msg = 'Firebase 权限被拒绝！请去 Firestore 控制台 → 规则 → 改为 allow read, write: if true;';
     } else if (msg.includes('unavailable') || msg.includes('network') || msg.includes('timeout')) {
       msg = '网络连接失败，请检查网络后重试';
     }
     alert('提交失败: ' + msg);
-    console.error('Firebase submit error:', err);
-    return;
-  }
-
-    // Show success
-    document.getElementById('adoptForm').style.display = 'none';
-    document.getElementById('formSuccess').classList.add('show');
-    updateCounts();
-
-  } catch (err) {
-    alert('提交失败，请重试: ' + err.message);
+    console.error('Submit error:', err);
   }
 
   btn.disabled = false;
