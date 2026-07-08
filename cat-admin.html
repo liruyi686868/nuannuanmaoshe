@@ -316,9 +316,15 @@ async function refresh() {
     return;
   }
 
-  // 🔥 Read from Firestore only
-  const snap = await db.collection('adoptions').orderBy('createdAt', 'desc').get();
+  // 🔥 Read from Firestore (no index needed)
+  const snap = await db.collection('adoptions').get();
   apps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  // Sort client-side instead of requiring a Firestore index
+  apps.sort((a, b) => {
+    const ta = a.timestamp || (a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().toISOString() : '');
+    const tb = b.timestamp || (b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().toISOString() : '');
+    return tb.localeCompare(ta);
+  });
 
   const today = new Date().toDateString();
 
@@ -375,8 +381,13 @@ setInterval(refresh, 5000);
 async function exportCSV() {
   let apps = [];
   if (firebaseReady && db) {
-    const snap = await db.collection('adoptions').orderBy('createdAt', 'desc').get();
+    const snap = await db.collection('adoptions').get();
     apps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    apps.sort((a, b) => {
+      const ta = a.timestamp || (a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().toISOString() : '');
+      const tb = b.timestamp || (b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().toISOString() : '');
+      return tb.localeCompare(ta);
+    });
   } else {
     apps = loadApps();
   }
