@@ -264,18 +264,72 @@ if (localStorage.getItem(AUTH_KEY) === 'true') {
 }
 
 // ═══════════════════════════════════════
-//  DATA
+//  FIREBASE CLOUD DATABASE
+// ═══════════════════════════════════════
+// Same Firebase config as the user-facing page
+const firebaseConfig = {
+  apiKey: "AIzaSyBG1YXgZgl0q6kds3ky3IPdP0aeaexoNeY",
+  authDomain: "nuannuanmaoshe.firebaseapp.com",
+  projectId: "nuannuanmaoshe",
+  storageBucket: "nuannuanmaoshe.firebasestorage.app",
+  messagingSenderId: "519005924251",
+  appId: "1:519005924251:web:404d589d34e63869754f3e",
+  measurementId: "G-PDM5KGP37H"
+};
+let db = null;
+let firebaseReady = false;
+
+(function loadFirebase() {
+  const s1 = document.createElement('script');
+  s1.src = 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js';
+  s1.onload = () => {
+    const s2 = document.createElement('script');
+    s2.src = 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js';
+    s2.onload = () => {
+      try {
+        if (firebaseConfig.apiKey !== 'YOUR_API_KEY') {
+          firebase.initializeApp(firebaseConfig);
+          db = firebase.firestore();
+          firebaseReady = true;
+          refresh();
+        }
+      } catch(e) { console.log('Firebase not configured yet'); }
+    };
+    document.head.appendChild(s2);
+  };
+  document.head.appendChild(s1);
+})();
+
+// ═══════════════════════════════════════
+//  DATA (Firebase + localStorage fallback)
 // ═══════════════════════════════════════
 function loadApps() {
   try { return JSON.parse(localStorage.getItem('cat_adoptions') || '[]'); } catch { return []; }
 }
 
-function refresh() {
-  const apps = loadApps();
+async function refresh() {
+  let apps = [];
+
+  if (firebaseReady && db) {
+    // 🔥 Read from Firebase Firestore (real-time cloud data)
+    try {
+      const snap = await db.collection('adoptions').orderBy('createdAt', 'desc').get();
+      apps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch(e) {
+      console.log('Firebase read error, falling back to localStorage');
+      apps = loadApps();
+    }
+  } else {
+    apps = loadApps();
+  }
+
   const today = new Date().toDateString();
 
   // Stats
-  const todayApps = apps.filter(a => new Date(a.timestamp).toDateString() === today);
+  const todayApps = apps.filter(a => {
+    const ts = a.timestamp || (a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().toISOString() : null);
+    return ts && new Date(ts).toDateString() === today;
+  });
   const cats = new Set(apps.map(a => a.cat)).size;
   const zaizaiCount = apps.filter(a => a.cat === '崽崽').length;
 
@@ -295,7 +349,8 @@ function refresh() {
   } else {
     empty.style.display = 'none';
     tbody.innerHTML = apps.map((a, i) => {
-      const time = new Date(a.timestamp).toLocaleString('zh-CN');
+      const ts = a.timestamp || (a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().toISOString() : new Date().toISOString());
+      const time = new Date(ts).toLocaleString('zh-CN');
       const catEmoji = a.cat === '崽崽' ? '🐱' : a.cat === '凌无敌' ? '😺' : '🐈';
       return `
         <tr>
@@ -317,11 +372,23 @@ setInterval(refresh, 5000);
 // ═══════════════════════════════════════
 //  EXPORT
 // ═══════════════════════════════════════
-function exportCSV() {
-  const apps = loadApps();
+// ═══════════════════════════════════════
+//  EXPORT (works with Firebase or localStorage)
+// ═══════════════════════════════════════
+async function exportCSV() {
+  let apps = [];
+  if (firebaseReady && db) {
+    const snap = await db.collection('adoptions').orderBy('createdAt', 'desc').get();
+    apps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } else {
+    apps = loadApps();
+  }
   if (apps.length === 0) return alert('暂无数据');
   const header = '申请猫咪,姓名,电话,城市,留言,申请时间';
-  const rows = apps.map(a => [a.cat, a.name, a.phone, a.city, (a.message||'').replace(/"/g,'""'), a.timestamp].map(v => '"' + v + '"').join(','));
+  const rows = apps.map(a => {
+    const ts = a.timestamp || (a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().toISOString() : '');
+    return [a.cat, a.name, a.phone, a.city, (a.message||'').replace(/"/g,'""'), ts].map(v => '"' + v + '"').join(',');
+  });
   const csv = '﻿' + [header, ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);

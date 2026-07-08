@@ -629,35 +629,99 @@ function cornerCatClick() {
 // ═══════════════════════════════════════
 //  ADOPTION FORM
 // ═══════════════════════════════════════
-function submitAdopt(e) {
+// ═══════════════════════════════════════
+//  FIREBASE CLOUD DATABASE
+// ═══════════════════════════════════════
+// Replace the placeholder below with your Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyBG1YXgZgl0q6kds3ky3IPdP0aeaexoNeY",
+  authDomain: "nuannuanmaoshe.firebaseapp.com",
+  projectId: "nuannuanmaoshe",
+  storageBucket: "nuannuanmaoshe.firebasestorage.app",
+  messagingSenderId: "519005924251",
+  appId: "1:519005924251:web:404d589d34e63869754f3e",
+  measurementId: "G-PDM5KGP37H"
+};
+// Load Firebase SDKs
+let db = null;
+let firebaseReady = false;
+
+(function loadFirebase() {
+  const script1 = document.createElement('script');
+  script1.src = 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js';
+  script1.onload = () => {
+    const script2 = document.createElement('script');
+    script2.src = 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js';
+    script2.onload = () => {
+      try {
+        if (firebaseConfig.apiKey !== 'YOUR_API_KEY') {
+          firebase.initializeApp(firebaseConfig);
+          db = firebase.firestore();
+          firebaseReady = true;
+          updateCounts();
+        }
+      } catch(e) { console.log('Firebase not configured yet'); }
+    };
+    document.head.appendChild(script2);
+  };
+  document.head.appendChild(script1);
+})();
+
+async function submitAdopt(e) {
   e.preventDefault();
+
   const data = {
-    id: Date.now(),
     cat: document.getElementById('adoptCat').value,
     name: document.getElementById('adoptName').value,
     phone: document.getElementById('adoptPhone').value,
     city: document.getElementById('adoptCity').value,
     message: document.getElementById('adoptMsg').value,
     timestamp: new Date().toISOString(),
+    createdAt: firebaseReady ? firebase.firestore.FieldValue.serverTimestamp() : new Date().toISOString(),
   };
 
-  // Save to localStorage
-  const apps = JSON.parse(localStorage.getItem('cat_adoptions') || '[]');
-  apps.unshift(data);
-  localStorage.setItem('cat_adoptions', JSON.stringify(apps));
+  const btn = document.querySelector('.submit-btn');
+  btn.disabled = true;
+  btn.textContent = '提交中...';
 
-  // Show success
-  document.getElementById('adoptForm').style.display = 'none';
-  document.getElementById('formSuccess').classList.add('show');
+  try {
+    if (firebaseReady && db) {
+      // 🔥 Save to Firebase Firestore (cloud)
+      await db.collection('adoptions').add(data);
+    } else {
+      // Fallback to localStorage if Firebase not configured
+      const apps = JSON.parse(localStorage.getItem('cat_adoptions') || '[]');
+      apps.unshift({ ...data, id: Date.now() });
+      localStorage.setItem('cat_adoptions', JSON.stringify(apps));
+    }
 
-  // Update count
-  updateCounts();
+    // Show success
+    document.getElementById('adoptForm').style.display = 'none';
+    document.getElementById('formSuccess').classList.add('show');
+    updateCounts();
+
+  } catch (err) {
+    alert('提交失败，请重试: ' + err.message);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '💕 提交申请';
 }
 
-function updateCounts() {
-  const apps = JSON.parse(localStorage.getItem('cat_adoptions') || '[]');
-  document.getElementById('countWaiting').textContent = Math.max(0, 8 - apps.length);
-  document.getElementById('countAdopted').textContent = 37 + apps.length;
+async function updateCounts() {
+  try {
+    if (firebaseReady && db) {
+      // 🔥 Read real-time count from Firebase
+      const snap = await db.collection('adoptions').get();
+      const count = snap.size;
+      document.getElementById('countWaiting').textContent = Math.max(0, 8 - count);
+      document.getElementById('countAdopted').textContent = 37 + count;
+    } else {
+      const apps = JSON.parse(localStorage.getItem('cat_adoptions') || '[]');
+      document.getElementById('countWaiting').textContent = Math.max(0, 8 - apps.length);
+      document.getElementById('countAdopted').textContent = 37 + apps.length;
+    }
+  } catch(e) {}
 }
 
 updateCounts();
