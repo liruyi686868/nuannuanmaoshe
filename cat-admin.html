@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐱 暖暖猫舍 · 管理后台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: light; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #fefaf6; color: #4a3728;
+    -webkit-font-smoothing: antialiased; min-height: 100vh;
+  }
+  .bg-decor {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+  }
+  .bg-decor .paw {
+    position: absolute; font-size: 40px; opacity: .04;
+    animation: slowFloat 20s linear infinite;
+  }
+  @keyframes slowFloat {
+    0% { transform: translateY(105vh) rotate(0deg); }
+    100% { transform: translateY(-10vh) rotate(200deg); }
+  }
+
+  /* ── Login ── */
+  #login-screen {
+    display: flex; align-items: center; justify-content: center; min-height: 100vh;
+    position: relative; z-index: 1;
+  }
+  .login-box {
+    background: #fffbf7; border: 2px solid #f0e0d0; border-radius: 20px;
+    padding: 40px; width: 380px; max-width: 90%; text-align: center;
+    box-shadow: 0 8px 30px rgba(0,0,0,.04);
+  }
+  .login-box .icon { font-size: 48px; margin-bottom: 12px; }
+  .login-box h1 { font-size: 22px; font-weight: 800; color: #5c3d2e; margin-bottom: 4px; }
+  .login-box p { font-size: 12px; color: #8b6f5e; margin-bottom: 24px; }
+  .login-box label { display: block; text-align: left; font-size: 12px; font-weight: 600; color: #6b5a4e; margin-bottom: 6px; }
+  .login-box input {
+    width: 100%; padding: 12px 14px; font-size: 14px;
+    background: #fefaf6; border: 1.5px solid #f0e0d0; border-radius: 10px;
+    color: #4a3728; outline: none; margin-bottom: 20px; transition: border-color .2s;
+  }
+  .login-box input:focus { border-color: #d4845a; }
+  .login-box button {
+    width: 100%; padding: 13px; border: none; border-radius: 10px;
+    background: linear-gradient(135deg, #d4845a, #c0734a);
+    color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(212,132,90,.2); transition: all .2s;
+  }
+  .login-box button:hover { box-shadow: 0 6px 22px rgba(212,132,90,.3); }
+  .login-error { color: #d4845a; font-size: 12px; margin-top: 10px; display: none; }
+
+  /* ── Dashboard ── */
+  #dashboard { display: none; position: relative; z-index: 1; }
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(254,250,246,.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid #f0e0d0;
+  }
+  .header-inner {
+    max-width: 1100px; margin: 0 auto; padding: 0 28px;
+    height: 60px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .header-logo { font-size: 18px; font-weight: 800; color: #d4845a; }
+  .header-links { display: flex; gap: 14px; align-items: center; }
+  .header-links a { color: #8b6f5e; font-size: 12px; font-weight: 600; text-decoration: none; }
+  .header-links a:hover { color: #d4845a; }
+  .header-links button {
+    padding: 6px 14px; border: 1.5px solid #f0e0d0; background: #fff;
+    border-radius: 8px; color: #c0734a; font-size: 11px; font-weight: 600; cursor: pointer;
+    transition: all .2s;
+  }
+  .header-links button:hover { border-color: #d4845a; background: #fff5ee; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 28px; }
+
+  /* ── Stats ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 30px; }
+  .stat-card {
+    background: #fffbf7; border: 1.5px solid #f0e0d0; border-radius: 14px; padding: 20px;
+  }
+  .stat-card .s-label { font-size: 11px; color: #8b6f5e; text-transform: uppercase; letter-spacing: .04em; }
+  .stat-card .s-value { font-size: 30px; font-weight: 900; color: #5c3d2e; margin-top: 2px; }
+  .stat-card .s-value.pink { color: #d4845a; }
+  .stat-card .s-value.purple { color: #8b6fba; }
+  .stat-card .s-value.green { color: #5b9e5b; }
+
+  /* ── Table ── */
+  .table-card {
+    background: #fffbf7; border: 1.5px solid #f0e0d0; border-radius: 14px; overflow: hidden;
+  }
+  .table-card .table-head {
+    padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid #f0e0d0;
+  }
+  .table-card .table-head h2 { font-size: 16px; font-weight: 800; color: #5c3d2e; }
+  .table-card .table-head span { font-size: 12px; color: #8b6f5e; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    text-align: left; padding: 12px 24px; font-size: 10px; font-weight: 600;
+    color: #8b6f5e; text-transform: uppercase; letter-spacing: .04em;
+    background: #fefaf6; border-bottom: 1px solid #f0e0d0; white-space: nowrap;
+  }
+  tbody td {
+    padding: 14px 24px; border-bottom: 1px solid #faf3eb; white-space: nowrap;
+  }
+  tbody tr:hover td { background: rgba(212,132,90,.03); }
+  .td-cat { font-weight: 700; color: #5c3d2e; }
+  .td-name { font-weight: 600; color: #5c3d2e; }
+  .td-msg { color: #6b5a4e; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+  .td-time { font-size: 11px; color: #8b6f5e; }
+  .td-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-size: 10px; font-weight: 700;
+  }
+  .badge-new { background: #ffe0cc; color: #d4845a; }
+  .badge-reviewed { background: #e0f0e0; color: #5b9e5b; }
+
+  .empty { text-align: center; padding: 48px; color: #b8a090; }
+  .empty .big-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty p { font-size: 14px; }
+
+  .export-bar { margin-top: 16px; text-align: right; }
+  .export-btn {
+    padding: 8px 18px; border: 1.5px solid #f0e0d0; background: #fff;
+    border-radius: 8px; color: #d4845a; font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: all .2s;
+  }
+  .export-btn:hover { border-color: #d4845a; background: #fff5ee; }
+</style>
+</head>
+<body>
+<div class="bg-decor" id="bgDecor"></div>
+
+<!-- Login -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="icon">🐱</div>
+    <h1>暖暖猫舍 · 管理后台</h1>
+    <p>请输入密码进入</p>
+    <label>密码</label>
+    <input type="password" id="pwdInput" placeholder="输入管理密码" onkeydown="if(event.key==='Enter')login()">
+    <button onclick="login()">✨ 进 入</button>
+    <p class="login-error" id="loginErr">密码错误，再想想？</p>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard">
+  <header>
+    <div class="header-inner">
+      <span class="header-logo">🐱 暖暖猫舍 · 领养申请管理</span>
+      <div class="header-links">
+        <a href="cat-house.html">← 返回前台</a>
+        <button onclick="logout()">退出</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="s-label">总申请数</div>
+        <div class="s-value pink" id="statTotal">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="s-label">今日申请</div>
+        <div class="s-value purple" id="statToday">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="s-label">涉及猫咪</div>
+        <div class="s-value" id="statCats">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="s-label">崽崽的申请（英短蓝猫）</div>
+        <div class="s-value green" id="statZaizai">0</div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-head">
+        <h2>📋 领养申请记录</h2>
+        <span id="tableCount"></span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>申请猫咪</th>
+              <th>姓名</th>
+              <th>电话</th>
+              <th>城市</th>
+              <th>留言</th>
+              <th>申请时间</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="tableEmpty" style="display:none;">
+        <div class="big-icon">📭</div>
+        <p>还没有领养申请</p>
+        <p style="font-size:12px;">前台有人提交申请后会出现在这里</p>
+      </div>
+    </div>
+
+    <div class="export-bar">
+      <button class="export-btn" onclick="exportCSV()">📥 导出 CSV</button>
+    </div>
+  </main>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  BG DECOR
+// ═══════════════════════════════════════
+const bgDec = document.getElementById('bgDecor');
+for (let i = 0; i < 10; i++) {
+  const p = document.createElement('span');
+  p.className = 'paw';
+  p.textContent = '🐾';
+  p.style.left = Math.random() * 100 + '%';
+  p.style.animationDelay = Math.random() * 20 + 's';
+  p.style.animationDuration = (15 + Math.random() * 20) + 's';
+  bgDec.appendChild(p);
+}
+
+// ═══════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════
+const PWD = 'miaomiao2024';
+const AUTH_KEY = 'cat_admin_auth';
+
+function login() {
+  const pwd = document.getElementById('pwdInput').value;
+  if (pwd === PWD) {
+    localStorage.setItem(AUTH_KEY, 'true');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    refresh();
+  } else {
+    document.getElementById('loginErr').style.display = 'block';
+  }
+}
+
+function logout() {
+  localStorage.removeItem(AUTH_KEY);
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('pwdInput').value = '';
+}
+
+if (localStorage.getItem(AUTH_KEY) === 'true') {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  refresh();
+}
+
+// ═══════════════════════════════════════
+//  FIREBASE CLOUD DATABASE
+// ═══════════════════════════════════════
+// Same Firebase config as the user-facing page
+const firebaseConfig = {
+  apiKey: "AIzaSyBG1YXgZgl0q6kds3ky3IPdP0aeaexoNeY",
+  authDomain: "nuannuanmaoshe.firebaseapp.com",
+  projectId: "nuannuanmaoshe",
+  storageBucket: "nuannuanmaoshe.firebasestorage.app",
+  messagingSenderId: "519005924251",
+  appId: "1:519005924251:web:404d589d34e63869754f3e",
+  measurementId: "G-PDM5KGP37H"
+};
+let db = null;
+let firebaseReady = false;
+
+(function loadFirebase() {
+  const s1 = document.createElement('script');
+  s1.src = 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js';
+  s1.onload = () => {
+    const s2 = document.createElement('script');
+    s2.src = 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js';
+    s2.onload = () => {
+      try {
+        if (firebaseConfig.apiKey !== 'YOUR_API_KEY') {
+          firebase.initializeApp(firebaseConfig);
+          db = firebase.firestore();
+          firebaseReady = true;
+          refresh();
+        }
+      } catch(e) { console.log('Firebase not configured yet'); }
+    };
+    document.head.appendChild(s2);
+  };
+  document.head.appendChild(s1);
+})();
+
+// ═══════════════════════════════════════
+//  DATA (Firebase + localStorage fallback)
+// ═══════════════════════════════════════
+function loadApps() {
+  try { return JSON.parse(localStorage.getItem('cat_adoptions') || '[]'); } catch { return []; }
+}
+
+async function refresh() {
+  let apps = [];
+
+  if (!firebaseReady || !db) {
+    document.getElementById('tableEmpty').style.display = 'block';
+    document.getElementById('tableEmpty').querySelector('p').textContent = '正在连接 Firebase...';
+    return;
+  }
+
+  // 🔥 Read from Firestore (no index needed)
+  const snap = await db.collection('adoptions').get();
+  apps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  // Sort client-side instead of requiring a Firestore index
+  apps.sort((a, b) => {
+    const ta = a.timestamp || (a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().toISOString() : '');
+    const tb = b.timestamp || (b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().toISOString() : '');
+    return tb.localeCompare(ta);
+  });
+
+  const today = new Date().toDateString();
+
+  // Stats
+  const todayApps = apps.filter(a => {
+    const ts = a.timestamp || (a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().toISOString() : null);
+    return ts && new Date(ts).toDateString() === today;
+  });
+  const cats = new Set(apps.map(a => a.cat)).size;
+  const zaizaiCount = apps.filter(a => a.cat === '崽崽').length;
+
+  document.getElementById('statTotal').textContent = apps.length;
+  document.getElementById('statToday').textContent = todayApps.length;
+  document.getElementById('statCats').textContent = cats;
+  document.getElementById('statZaizai').textContent = zaizaiCount;
+
+  // Table
+  document.getElementById('tableCount').textContent = `共 ${apps.length} 条记录`;
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('tableEmpty');
+
+  if (apps.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = apps.map((a, i) => {
+      const ts = a.timestamp || (a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().toISOString() : new Date().toISOString());
+      const time = new Date(ts).toLocaleString('zh-CN');
+      const catEmoji = a.cat === '崽崽' ? '🐱' : a.cat === '凌无敌' ? '😺' : '🐈';
+      return `
+        <tr>
+          <td style="color:#b8a090;">${i + 1}</td>
+          <td class="td-cat">${catEmoji} ${a.cat}</td>
+          <td class="td-name">${a.name}</td>
+          <td>${a.phone}</td>
+          <td>${a.city}</td>
+          <td class="td-msg" title="${a.message}">${a.message}</td>
+          <td class="td-time">${time}</td>
+        </tr>`;
+    }).join('');
+  }
+}
+
+// Auto-refresh
+setInterval(refresh, 5000);
+
+// ═══════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════
+// ═══════════════════════════════════════
+//  EXPORT (works with Firebase or localStorage)
+// ═══════════════════════════════════════
+async function exportCSV() {
+  let apps = [];
+  if (firebaseReady && db) {
+    const snap = await db.collection('adoptions').get();
+    apps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    apps.sort((a, b) => {
+      const ta = a.timestamp || (a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().toISOString() : '');
+      const tb = b.timestamp || (b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().toISOString() : '');
+      return tb.localeCompare(ta);
+    });
+  } else {
+    apps = loadApps();
+  }
+  if (apps.length === 0) return alert('暂无数据');
+  const header = '申请猫咪,姓名,电话,城市,留言,申请时间';
+  const rows = apps.map(a => {
+    const ts = a.timestamp || (a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().toISOString() : '');
+    return [a.cat, a.name, a.phone, a.city, (a.message||'').replace(/"/g,'""'), ts].map(v => '"' + v + '"').join(',');
+  });
+  const csv = '﻿' + [header, ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = 'cat-adoptions-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
